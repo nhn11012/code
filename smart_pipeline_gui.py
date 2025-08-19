@@ -66,6 +66,22 @@ def save_settings(data: dict) -> None:
         pass
 
 
+def get_output_dir(src_path: str) -> str:
+    """Return the `_out` directory for the given source file.
+
+    If the parent folder already ends with `_out`, reuse it. Otherwise create a
+    sibling folder named ``<base>_out``.
+    """
+    parent = os.path.dirname(src_path)
+    if os.path.basename(parent).endswith("_out"):
+        out_dir = parent
+    else:
+        base = os.path.splitext(os.path.basename(src_path))[0]
+        out_dir = os.path.join(parent, f"{base}_out")
+    os.makedirs(out_dir, exist_ok=True)
+    return out_dir
+
+
 # ---------------- AssemblyAI (Media → SRT) ----------------
 class AssemblyAIError(Exception):
     pass
@@ -803,8 +819,7 @@ class App(tk.Tk):
                 self._log("[AAI] Downloading SRT...")
                 srt_text = aai_download_srt(api_key, tid)
                 base = os.path.splitext(os.path.basename(media_path))[0]
-                out_dir = os.path.join(os.path.dirname(media_path), f"{base}_out")
-                os.makedirs(out_dir, exist_ok=True)
+                out_dir = get_output_dir(media_path)
                 out_path = os.path.join(out_dir, f"{base}.srt")
                 with open(out_path, "w", encoding="utf-8") as f:
                     f.write(srt_text)
@@ -854,8 +869,7 @@ class App(tk.Tk):
             for media_path in files:
                 try:
                     base = os.path.splitext(os.path.basename(media_path))[0]
-                    out_dir = os.path.join(os.path.dirname(media_path), f"{base}_out")
-                    os.makedirs(out_dir, exist_ok=True)
+                    out_dir = get_output_dir(media_path)
                     out_path = os.path.join(out_dir, f"{base}.srt")
                     decision = self._confirm_overwrite(out_path)
                     if decision is False:
@@ -908,8 +922,7 @@ class App(tk.Tk):
             for srt_path in files:
                 try:
                     base = os.path.splitext(os.path.basename(srt_path))[0]
-                    out_dir = os.path.join(os.path.dirname(srt_path), f"{base}_out")
-                    os.makedirs(out_dir, exist_ok=True)
+                    out_dir = get_output_dir(srt_path)
                     out_path = os.path.join(out_dir, f"{base}_script_{lang_code}.txt")
                     decision = self._confirm_overwrite(out_path)
                     if decision is False:
@@ -964,8 +977,7 @@ class App(tk.Tk):
             for txt_path in files:
                 try:
                     base = os.path.splitext(os.path.basename(txt_path))[0]
-                    out_dir = os.path.join(os.path.dirname(txt_path), f"{base}_out")
-                    os.makedirs(out_dir, exist_ok=True)
+                    out_dir = get_output_dir(txt_path)
                     out_path = os.path.join(out_dir, f"{base}.mp3")
                     decision = self._confirm_overwrite(out_path)
                     if decision is False:
@@ -1036,8 +1048,7 @@ class App(tk.Tk):
             try:
                 result = call_gemini(api_key, model, prompt, want_json)
                 base = os.path.splitext(os.path.basename(srt_path))[0]
-                out_dir = os.path.join(os.path.dirname(srt_path), f"{base}_out")
-                os.makedirs(out_dir, exist_ok=True)
+                out_dir = get_output_dir(srt_path)
                 out_path = os.path.join(out_dir, f"{base}_script_{lang_code}.txt")
                 with open(out_path, "w", encoding="utf-8") as f:
                     f.write(result)
@@ -1145,8 +1156,7 @@ class App(tk.Tk):
             messagebox.showerror("API rỗng", "Không đọc được API"); return
         rotator = KeyRotator(pool)
         base = os.path.splitext(os.path.basename(txt_path))[0]
-        out_dir = os.path.join(os.path.dirname(txt_path), f"{base}_out")
-        os.makedirs(out_dir, exist_ok=True)
+        out_dir = get_output_dir(txt_path)
         out_path = os.path.join(out_dir, f"{base}.mp3")
 
         self._log("[TTS] Đang tạo audio từ TXT...")
@@ -1195,8 +1205,7 @@ class App(tk.Tk):
             messagebox.showerror("API rỗng", "Không đọc được API"); return
         rotator = KeyRotator(pool)
         base = os.path.splitext(os.path.basename(srt_path))[0]
-        out_dir = os.path.join(os.path.dirname(srt_path), f"{base}_out")
-        os.makedirs(out_dir, exist_ok=True)
+        out_dir = get_output_dir(srt_path)
         out_path = os.path.join(out_dir, f"{base}_tts.mp3")
 
         self._log("[TTS] Đang tạo audio từ SRT (khớp timeline)...")
