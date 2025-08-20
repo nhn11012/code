@@ -111,7 +111,7 @@ def aai_upload(api_key: str, media_path: str) -> str:
     return data.get("upload_url") or ""
 
 
-def aai_request_transcript(api_key: str, upload_url: str, language_code: str = "vi") -> str:
+def aai_request_transcript(api_key: str, upload_url: str, language_code: str = "en") -> str:
     _require_requests()
     url = "https://api.assemblyai.com/v2/transcript"
     headers = {
@@ -120,7 +120,7 @@ def aai_request_transcript(api_key: str, upload_url: str, language_code: str = "
     }
     payload = {
         "audio_url": upload_url,
-        "language_code": language_code or "vi",
+        "language_code": language_code or "en",
         "punctuate": True,
         "format_text": True,
     }
@@ -492,7 +492,7 @@ class App(tk.Tk):
         # AssemblyAI
         self.aai_api_file = tk.StringVar(value=self.settings.get("aai_api_file", ""))
         self.media_file = tk.StringVar(value=self.settings.get("media_file", ""))
-        self.aai_lang = tk.StringVar(value=self.settings.get("aai_lang", "vi"))
+        self.aai_lang = tk.StringVar(value=self.settings.get("aai_lang", "en"))
 
         # Gemini
         self.gem_api_file = tk.StringVar(value=self.settings.get("gem_api_file", ""))
@@ -802,7 +802,7 @@ class App(tk.Tk):
     def on_media_to_srt(self):
         api_path = self.aai_api_file.get().strip()
         media_path = self.media_file.get().strip()
-        lang = self.aai_lang.get().strip() or "vi"
+        lang = self.aai_lang.get().strip() or "en"
         if not api_path or not os.path.isfile(api_path):
             messagebox.showerror("Thiếu API AAI", "Hãy chọn file API AssemblyAI (.txt)")
             return
@@ -853,7 +853,7 @@ class App(tk.Tk):
     def on_media_dir_pipeline(self):
         api_path = self.aai_api_file.get().strip()
         media_dir = self.media_dir.get().strip()
-        lang = self.aai_lang.get().strip() or "vi"
+        lang = self.aai_lang.get().strip() or "en"
         if not api_path or not os.path.isfile(api_path):
             messagebox.showerror("Thiếu API AAI", "Hãy chọn file API AssemblyAI (.txt)"); return
         if not media_dir or not os.path.isdir(media_dir):
