@@ -111,7 +111,7 @@ def aai_upload(api_key: str, media_path: str) -> str:
     return data.get("upload_url") or ""
 
 
-def aai_request_transcript(api_key: str, upload_url: str, language_code: str = "vi") -> str:
+def aai_request_transcript(api_key: str, upload_url: str, language_code: str = "en") -> str:
     _require_requests()
     url = "https://api.assemblyai.com/v2/transcript"
     headers = {
@@ -120,7 +120,7 @@ def aai_request_transcript(api_key: str, upload_url: str, language_code: str = "
     }
     payload = {
         "audio_url": upload_url,
-        "language_code": language_code or "vi",
+        "language_code": language_code or "en",
         "punctuate": True,
         "format_text": True,
     }
@@ -492,7 +492,7 @@ class App(tk.Tk):
         # AssemblyAI
         self.aai_api_file = tk.StringVar(value=self.settings.get("aai_api_file", ""))
         self.media_file = tk.StringVar(value=self.settings.get("media_file", ""))
-        self.aai_lang = tk.StringVar(value=self.settings.get("aai_lang", "vi"))
+        self.aai_lang = tk.StringVar(value=self.settings.get("aai_lang", "en"))
 
         # Gemini
         self.gem_api_file = tk.StringVar(value=self.settings.get("gem_api_file", ""))
@@ -547,15 +547,19 @@ class App(tk.Tk):
     # ---- UI ----
     def _build_ui(self):
         pad = {"padx": 10, "pady": 6}
+        # Root grid config
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_rowconfigure(2, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
         # Split layout: left config (1/3), right pipeline (2/3)
-        container = ttk.Frame(self, padding="12 10 12 10")
-        container.pack(fill="both", expand=True)
-        container.grid_columnconfigure(0, weight=1)
-        container.grid_columnconfigure(1, weight=2)
+        container = ttk.PanedWindow(self, orient="horizontal")
+        container.grid(row=0, column=0, sticky="nsew")
 
         # Left column: config
-        left = ttk.Frame(container)
-        left.grid(row=0, column=0, sticky="nsew", **pad)
+        left = ttk.Frame(container, padding="12 10 12 10")
+        container.add(left, weight=1)
         sec_api = ttk.LabelFrame(left, text="Khu vực API Keys (cấu hình chung)")
         sec_api.pack(fill="x", **pad)
         r = ttk.Frame(sec_api)
@@ -587,8 +591,8 @@ class App(tk.Tk):
         ttk.Button(r, text="Chọn...", command=lambda: self._pick_dir_into(self.default_output_dir, "default_output_dir")).pack(side="left")
 
         # Right column: pipeline
-        right = ttk.Frame(container)
-        right.grid(row=0, column=1, sticky="nsew", **pad)
+        right = ttk.Frame(container, padding="12 10 12 10")
+        container.add(right, weight=2)
         sec_aai = ttk.LabelFrame(right, text="Khối 1: Media → SRT")
         sec_aai.pack(fill="x", **pad)
         r = ttk.Frame(sec_aai); r.pack(fill="x", **pad)
@@ -655,21 +659,25 @@ class App(tk.Tk):
         ttk.Button(r, text="Kịch bản → Audio", command=self.on_txt_unified, width=18).pack(side="left")
         # Bottom global controls (always visible)
         ctrl = ttk.Frame(self, padding="6 6 6 6")
-        ctrl.pack(fill="x")
-        ttk.Button(ctrl, text="Chạy toàn bộ ▶", command=self.on_pipeline_full).pack(side="left")
-        ttk.Button(ctrl, text="Tạm dừng ⏸", command=self.on_pause).pack(side="left", padx=(8,0))
-        ttk.Button(ctrl, text="Dừng ■", command=self.on_stop).pack(side="left", padx=(8,0))
+        ctrl.grid(row=1, column=0, sticky="ew")
+        ttk.Button(ctrl, text="Chạy toàn bộ ▶", command=self.on_pipeline_full).grid(row=0, column=0)
+        ttk.Button(ctrl, text="Tạm dừng ⏸", command=self.on_pause).grid(row=0, column=1, padx=(8,0))
+        ttk.Button(ctrl, text="Dừng ■", command=self.on_stop).grid(row=0, column=2, padx=(8,0))
         self.queue_var = tk.StringVar(value="Hàng đợi: 0")
-        ttk.Label(ctrl, textvariable=self.queue_var).pack(side="left", padx=(12,0))
+        ttk.Label(ctrl, textvariable=self.queue_var).grid(row=0, column=3, padx=(12,0))
+        ttk.Button(ctrl, text="Mở thư mục đầu ra", command=self.open_output_folder).grid(row=0, column=5, padx=(8,8))
         self.progress = ttk.Progressbar(ctrl, orient="horizontal", mode="determinate")
-        self.progress.pack(side="right", fill="x", expand=True)
-        ttk.Button(ctrl, text="Mở thư mục đầu ra", command=self.open_output_folder).pack(side="right", padx=(8,8))
+        self.progress.grid(row=0, column=4, sticky="ew")
+        ctrl.grid_columnconfigure(4, weight=1)
+        ctrl.grid_rowconfigure(0, weight=1)
 
         # Log area (always visible)
         sec_log = ttk.LabelFrame(self, text="Nhật ký")
-        sec_log.pack(fill="both", expand=True, **pad)
+        sec_log.grid(row=2, column=0, sticky="nsew", **pad)
+        sec_log.grid_rowconfigure(0, weight=1)
+        sec_log.grid_columnconfigure(0, weight=1)
         self.log = tk.Text(sec_log, height=12, wrap="word")
-        self.log.pack(fill="both", expand=True)
+        self.log.grid(row=0, column=0, sticky="nsew")
 
         self._log("Sẵn sàng. Chọn nguồn/thiết lập và bấm 'Chạy toàn bộ'.")
 
@@ -794,7 +802,7 @@ class App(tk.Tk):
     def on_media_to_srt(self):
         api_path = self.aai_api_file.get().strip()
         media_path = self.media_file.get().strip()
-        lang = self.aai_lang.get().strip() or "vi"
+        lang = self.aai_lang.get().strip() or "en"
         if not api_path or not os.path.isfile(api_path):
             messagebox.showerror("Thiếu API AAI", "Hãy chọn file API AssemblyAI (.txt)")
             return
@@ -845,7 +853,7 @@ class App(tk.Tk):
     def on_media_dir_pipeline(self):
         api_path = self.aai_api_file.get().strip()
         media_dir = self.media_dir.get().strip()
-        lang = self.aai_lang.get().strip() or "vi"
+        lang = self.aai_lang.get().strip() or "en"
         if not api_path or not os.path.isfile(api_path):
             messagebox.showerror("Thiếu API AAI", "Hãy chọn file API AssemblyAI (.txt)"); return
         if not media_dir or not os.path.isdir(media_dir):
