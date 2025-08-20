@@ -540,16 +540,20 @@ class App(tk.Tk):
         self._lang_map_vi_to_en = {vi: en for (vi, en, code) in self._lang_choices}
         self._lang_map_vi_to_code = {vi: code for (vi, en, code) in self._lang_choices}
         self._locale_map = {
-            "en": "en-US",
-            "vi": "vi-VN",
-            "es": "es-ES",
-            "pt": "pt-BR",
-            "de": "de-DE",
-            "fr": "fr-FR",
-            "ko": "ko-KR",
-            "ja": "ja-JP",
+            "en": ["en-US", "en-UK"],
+            "vi": ["vi-VN"],
+            "es": ["es-ES", "es-MX"],
+            "pt": ["pt-BR", "pt-PT"],
+            "de": ["de-DE", "de-AT"],
+            "fr": ["fr-FR", "fr-CA"],
+            "ko": ["ko-KR"],
+            "ja": ["ja-JP"],
         }
-        self._locale_opts = [""] + list(self._locale_map.values())
+        # ensure locale is valid for current language
+        current_code = self.lang_code.get()
+        current_locales = self._locale_map.get(current_code, [])
+        if self.locale.get() not in current_locales:
+            self.locale.set(current_locales[0] if current_locales else "")
         self.lang_display = tk.StringVar(value=self.settings.get("lang_display", "Tiếng Việt"))
 
         # UI
@@ -643,7 +647,7 @@ class App(tk.Tk):
         cmb_locale = ttk.Combobox(
             r,
             textvariable=self.locale,
-            values=self._locale_opts,
+            values=[""] + self._locale_map.get(self.lang_code.get(), []),
             width=12,
             state="readonly",
         )
@@ -655,7 +659,10 @@ class App(tk.Tk):
             code = self._lang_map_vi_to_code.get(vi_name, "vi")
             self.target_lang.set(en_name)
             self.lang_code.set(code)
-            self.locale.set(self._locale_map.get(code, ""))
+            locales = self._locale_map.get(code, [])
+            cmb_locale["values"] = [""] + locales
+            if self.locale.get() not in locales:
+                self.locale.set(locales[0] if locales else "")
             self.settings["lang_display"] = vi_name
             self.settings["target_lang"] = en_name
             self.settings["lang_code"] = code
