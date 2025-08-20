@@ -475,8 +475,10 @@ class App(tk.Tk):
         super().__init__()
         self.title("Pipeline: Media → SRT → Script → Audio")
         self.configure(bg=BG_COLOR)
-        self.geometry("980x760")
-        self.minsize(980, 720)
+        # Mở rộng kích thước cửa sổ mặc định để nhìn thấy toàn bộ
+        # các thành phần và nút bấm ngay khi khởi động.
+        self.geometry("1200x860")
+        self.minsize(1200, 820)
 
         # UI styles: bold titles and bold button texts
         style = ttk.Style()
