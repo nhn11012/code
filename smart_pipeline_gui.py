@@ -504,12 +504,12 @@ class App(tk.Tk):
         self.override_rate = tk.StringVar(value=self.settings.get("override_rate", ""))
 
         # Files
-        self.srt_file = tk.StringVar(value=self.settings.get("srt_file", ""))
-        self.script_file = tk.StringVar(value=self.settings.get("script_file", ""))
+        self.srt_file = tk.StringVar()
+        self.script_file = tk.StringVar()
         # Batch directories (non-recursive)
         self.media_dir = tk.StringVar(value=self.settings.get("media_dir", ""))
-        self.srt_dir = tk.StringVar(value=self.settings.get("srt_dir", ""))
-        self.txt_dir = tk.StringVar(value=self.settings.get("txt_dir", ""))
+        self.srt_dir = tk.StringVar()
+        self.txt_dir = tk.StringVar()
 
         # ElevenLabs
         self.eleven_api_txt = tk.StringVar(value=self.settings.get("eleven_api_txt", ""))
@@ -520,11 +520,11 @@ class App(tk.Tk):
 
         # Batch directories (non-recursive) + unified pick fields
         self.media_dir = tk.StringVar(value=self.settings.get("media_dir", ""))
-        self.srt_dir = tk.StringVar(value=self.settings.get("srt_dir", ""))
-        self.txt_dir = tk.StringVar(value=self.settings.get("txt_dir", ""))
+        self.srt_dir = tk.StringVar()
+        self.txt_dir = tk.StringVar()
         self.media_pick = tk.StringVar(value=self.settings.get("media_pick", self.media_file.get() or self.media_dir.get()))
-        self.srt_pick = tk.StringVar(value=self.settings.get("srt_pick", self.srt_file.get() or self.srt_dir.get()))
-        self.txt_pick = tk.StringVar(value=self.settings.get("txt_pick", self.script_file.get() or self.txt_dir.get()))
+        self.srt_pick = tk.StringVar()
+        self.txt_pick = tk.StringVar()
 
         # Language choices (Vietnamese labels)
         self._lang_choices = [
@@ -714,29 +714,21 @@ class App(tk.Tk):
         p = filedialog.askopenfilename(title="Chọn file .srt", filetypes=[("SRT","*.srt"),("All","*.*")])
         if p:
             self.srt_file.set(p)
-            self.settings["srt_file"] = p
-            save_settings(self.settings)
 
     def browse_srt_dir(self):
         p = filedialog.askdirectory(title="Chọn thư mục SRT")
         if p:
             self.srt_dir.set(p)
-            self.settings["srt_dir"] = p
-            save_settings(self.settings)
 
     def browse_script(self):
         p = filedialog.askopenfilename(title="Chọn file kịch bản .txt", filetypes=[("Text","*.txt"),("All","*.*")])
         if p:
             self.script_file.set(p)
-            self.settings["script_file"] = p
-            save_settings(self.settings)
 
     def browse_txt_dir(self):
         p = filedialog.askdirectory(title="Chọn thư mục TXT")
         if p:
             self.txt_dir.set(p)
-            self.settings["txt_dir"] = p
-            save_settings(self.settings)
 
     def browse_eleven_api(self):
         p = filedialog.askopenfilename(title="Chọn file ElevenLabs API (mỗi dòng 1 key)", filetypes=[("Text","*.txt"),("All","*.*")])
@@ -831,7 +823,6 @@ class App(tk.Tk):
                 out_path = os.path.join(out_dir, f"{base}.srt")
                 with open(out_path, "w", encoding="utf-8") as f:
                     f.write(srt_text)
-                self.settings["srt_file"] = out_path
                 self.srt_file.set(out_path)
                 self.settings["last_output_dir"] = out_dir
                 save_settings(self.settings)
@@ -1062,7 +1053,6 @@ class App(tk.Tk):
                     f.write(result)
                 self.script_file.set(out_path)
                 self.settings.update({
-                    "script_file": out_path,
                     "gem_model": model,
                     "output_format": self.output_format.get().strip(),
                     "target_lang": self.target_lang.get().strip(),
