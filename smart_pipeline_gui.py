@@ -111,7 +111,7 @@ def aai_upload(api_key: str, media_path: str) -> str:
     return data.get("upload_url") or ""
 
 
-def aai_request_transcript(api_key: str, upload_url: str, language_code: str = "vi") -> str:
+def aai_request_transcript(api_key: str, upload_url: str, language_code: str = "en") -> str:
     _require_requests()
     url = "https://api.assemblyai.com/v2/transcript"
     headers = {
@@ -120,7 +120,7 @@ def aai_request_transcript(api_key: str, upload_url: str, language_code: str = "
     }
     payload = {
         "audio_url": upload_url,
-        "language_code": language_code or "vi",
+        "language_code": language_code or "en",
         "punctuate": True,
         "format_text": True,
     }
@@ -492,7 +492,7 @@ class App(tk.Tk):
         # AssemblyAI
         self.aai_api_file = tk.StringVar(value=self.settings.get("aai_api_file", ""))
         self.media_file = tk.StringVar(value=self.settings.get("media_file", ""))
-        self.aai_lang = tk.StringVar(value=self.settings.get("aai_lang", "vi"))
+        self.aai_lang = tk.StringVar(value=self.settings.get("aai_lang", "en"))
 
         # Gemini
         self.gem_api_file = tk.StringVar(value=self.settings.get("gem_api_file", ""))
@@ -504,12 +504,12 @@ class App(tk.Tk):
         self.override_rate = tk.StringVar(value=self.settings.get("override_rate", ""))
 
         # Files
-        self.srt_file = tk.StringVar(value=self.settings.get("srt_file", ""))
-        self.script_file = tk.StringVar(value=self.settings.get("script_file", ""))
+        self.srt_file = tk.StringVar()
+        self.script_file = tk.StringVar()
         # Batch directories (non-recursive)
         self.media_dir = tk.StringVar(value=self.settings.get("media_dir", ""))
-        self.srt_dir = tk.StringVar(value=self.settings.get("srt_dir", ""))
-        self.txt_dir = tk.StringVar(value=self.settings.get("txt_dir", ""))
+        self.srt_dir = tk.StringVar()
+        self.txt_dir = tk.StringVar()
 
         # ElevenLabs
         self.eleven_api_txt = tk.StringVar(value=self.settings.get("eleven_api_txt", ""))
@@ -520,11 +520,11 @@ class App(tk.Tk):
 
         # Batch directories (non-recursive) + unified pick fields
         self.media_dir = tk.StringVar(value=self.settings.get("media_dir", ""))
-        self.srt_dir = tk.StringVar(value=self.settings.get("srt_dir", ""))
-        self.txt_dir = tk.StringVar(value=self.settings.get("txt_dir", ""))
+        self.srt_dir = tk.StringVar()
+        self.txt_dir = tk.StringVar()
         self.media_pick = tk.StringVar(value=self.settings.get("media_pick", self.media_file.get() or self.media_dir.get()))
-        self.srt_pick = tk.StringVar(value=self.settings.get("srt_pick", self.srt_file.get() or self.srt_dir.get()))
-        self.txt_pick = tk.StringVar(value=self.settings.get("txt_pick", self.script_file.get() or self.txt_dir.get()))
+        self.srt_pick = tk.StringVar()
+        self.txt_pick = tk.StringVar()
 
         # Language choices (Vietnamese labels)
         self._lang_choices = [
@@ -539,6 +539,17 @@ class App(tk.Tk):
         ]
         self._lang_map_vi_to_en = {vi: en for (vi, en, code) in self._lang_choices}
         self._lang_map_vi_to_code = {vi: code for (vi, en, code) in self._lang_choices}
+        self._locale_map = {
+            "en": "en-US",
+            "vi": "vi-VN",
+            "es": "es-ES",
+            "pt": "pt-BR",
+            "de": "de-DE",
+            "fr": "fr-FR",
+            "ko": "ko-KR",
+            "ja": "ja-JP",
+        }
+        self._locale_opts = [""] + list(self._locale_map.values())
         self.lang_display = tk.StringVar(value=self.settings.get("lang_display", "Tiếng Việt"))
 
         # UI
@@ -547,15 +558,19 @@ class App(tk.Tk):
     # ---- UI ----
     def _build_ui(self):
         pad = {"padx": 10, "pady": 6}
+        # Root grid config
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_rowconfigure(2, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
         # Split layout: left config (1/3), right pipeline (2/3)
-        container = ttk.Frame(self, padding="12 10 12 10")
-        container.pack(fill="both", expand=True)
-        container.grid_columnconfigure(0, weight=1)
-        container.grid_columnconfigure(1, weight=2)
+        container = ttk.PanedWindow(self, orient="horizontal")
+        container.grid(row=0, column=0, sticky="nsew")
 
         # Left column: config
-        left = ttk.Frame(container)
-        left.grid(row=0, column=0, sticky="nsew", **pad)
+        left = ttk.Frame(container, padding="12 10 12 10")
+        container.add(left, weight=1)
         sec_api = ttk.LabelFrame(left, text="Khu vực API Keys (cấu hình chung)")
         sec_api.pack(fill="x", **pad)
         r = ttk.Frame(sec_api)
@@ -587,8 +602,8 @@ class App(tk.Tk):
         ttk.Button(r, text="Chọn...", command=lambda: self._pick_dir_into(self.default_output_dir, "default_output_dir")).pack(side="left")
 
         # Right column: pipeline
-        right = ttk.Frame(container)
-        right.grid(row=0, column=1, sticky="nsew", **pad)
+        right = ttk.Frame(container, padding="12 10 12 10")
+        container.add(right, weight=2)
         sec_aai = ttk.LabelFrame(right, text="Khối 1: Media → SRT")
         sec_aai.pack(fill="x", **pad)
         r = ttk.Frame(sec_aai); r.pack(fill="x", **pad)
@@ -615,23 +630,46 @@ class App(tk.Tk):
         ttk.Label(r, text="Định dạng:").pack(side="left", padx=(12,0))
         ttk.Combobox(r, textvariable=self.output_format, values=["Text","Markdown","JSON"], width=12, state="readonly").pack(side="left")
         ttk.Label(r, text="Ngôn ngữ:").pack(side="left", padx=(12,0))
-        cmb_lang = ttk.Combobox(r, textvariable=self.lang_display, values=[vi for (vi, en, code) in self._lang_choices], width=22, state="readonly")
+        cmb_lang = ttk.Combobox(
+            r,
+            textvariable=self.lang_display,
+            values=[vi for (vi, en, code) in self._lang_choices],
+            width=22,
+            state="readonly",
+        )
         cmb_lang.pack(side="left")
+
+        ttk.Label(r, text="Locale:").pack(side="left", padx=(12,0))
+        cmb_locale = ttk.Combobox(
+            r,
+            textvariable=self.locale,
+            values=self._locale_opts,
+            width=12,
+            state="readonly",
+        )
+        cmb_locale.pack(side="left")
+
         def _on_lang_selected(_=None):
             vi_name = self.lang_display.get()
             en_name = self._lang_map_vi_to_en.get(vi_name, "Vietnamese")
             code = self._lang_map_vi_to_code.get(vi_name, "vi")
             self.target_lang.set(en_name)
             self.lang_code.set(code)
+            self.locale.set(self._locale_map.get(code, ""))
             self.settings["lang_display"] = vi_name
             self.settings["target_lang"] = en_name
             self.settings["lang_code"] = code
+            self.settings["locale"] = self.locale.get()
             save_settings(self.settings)
+
+        def _on_locale_selected(_=None):
+            self.settings["locale"] = self.locale.get()
+            save_settings(self.settings)
+
         cmb_lang.bind("<<ComboboxSelected>>", _on_lang_selected)
+        cmb_locale.bind("<<ComboboxSelected>>", _on_locale_selected)
         # sync current on load
         _on_lang_selected()
-        ttk.Label(r, text="Locale:").pack(side="left", padx=(12,0))
-        ttk.Entry(r, textvariable=self.locale, width=12).pack(side="left")
         r = ttk.Frame(sec_g); r.pack(fill="x", **pad)
         ttk.Button(r, text="SRT → Kịch bản", command=self.on_srt_unified, width=18).pack(side="left")
         ttk.Label(r, text="Tốc độ override (tùy chọn):").pack(side="left", padx=(18,0))
@@ -655,21 +693,25 @@ class App(tk.Tk):
         ttk.Button(r, text="Kịch bản → Audio", command=self.on_txt_unified, width=18).pack(side="left")
         # Bottom global controls (always visible)
         ctrl = ttk.Frame(self, padding="6 6 6 6")
-        ctrl.pack(fill="x")
-        ttk.Button(ctrl, text="Chạy toàn bộ ▶", command=self.on_pipeline_full).pack(side="left")
-        ttk.Button(ctrl, text="Tạm dừng ⏸", command=self.on_pause).pack(side="left", padx=(8,0))
-        ttk.Button(ctrl, text="Dừng ■", command=self.on_stop).pack(side="left", padx=(8,0))
+        ctrl.grid(row=1, column=0, sticky="ew")
+        ttk.Button(ctrl, text="Chạy toàn bộ ▶", command=self.on_pipeline_full).grid(row=0, column=0)
+        ttk.Button(ctrl, text="Tạm dừng ⏸", command=self.on_pause).grid(row=0, column=1, padx=(8,0))
+        ttk.Button(ctrl, text="Dừng ■", command=self.on_stop).grid(row=0, column=2, padx=(8,0))
         self.queue_var = tk.StringVar(value="Hàng đợi: 0")
-        ttk.Label(ctrl, textvariable=self.queue_var).pack(side="left", padx=(12,0))
+        ttk.Label(ctrl, textvariable=self.queue_var).grid(row=0, column=3, padx=(12,0))
+        ttk.Button(ctrl, text="Mở thư mục đầu ra", command=self.open_output_folder).grid(row=0, column=5, padx=(8,8))
         self.progress = ttk.Progressbar(ctrl, orient="horizontal", mode="determinate")
-        self.progress.pack(side="right", fill="x", expand=True)
-        ttk.Button(ctrl, text="Mở thư mục đầu ra", command=self.open_output_folder).pack(side="right", padx=(8,8))
+        self.progress.grid(row=0, column=4, sticky="ew")
+        ctrl.grid_columnconfigure(4, weight=1)
+        ctrl.grid_rowconfigure(0, weight=1)
 
         # Log area (always visible)
         sec_log = ttk.LabelFrame(self, text="Nhật ký")
-        sec_log.pack(fill="both", expand=True, **pad)
+        sec_log.grid(row=2, column=0, sticky="nsew", **pad)
+        sec_log.grid_rowconfigure(0, weight=1)
+        sec_log.grid_columnconfigure(0, weight=1)
         self.log = tk.Text(sec_log, height=12, wrap="word")
-        self.log.pack(fill="both", expand=True)
+        self.log.grid(row=0, column=0, sticky="nsew")
 
         self._log("Sẵn sàng. Chọn nguồn/thiết lập và bấm 'Chạy toàn bộ'.")
 
@@ -706,29 +748,21 @@ class App(tk.Tk):
         p = filedialog.askopenfilename(title="Chọn file .srt", filetypes=[("SRT","*.srt"),("All","*.*")])
         if p:
             self.srt_file.set(p)
-            self.settings["srt_file"] = p
-            save_settings(self.settings)
 
     def browse_srt_dir(self):
         p = filedialog.askdirectory(title="Chọn thư mục SRT")
         if p:
             self.srt_dir.set(p)
-            self.settings["srt_dir"] = p
-            save_settings(self.settings)
 
     def browse_script(self):
         p = filedialog.askopenfilename(title="Chọn file kịch bản .txt", filetypes=[("Text","*.txt"),("All","*.*")])
         if p:
             self.script_file.set(p)
-            self.settings["script_file"] = p
-            save_settings(self.settings)
 
     def browse_txt_dir(self):
         p = filedialog.askdirectory(title="Chọn thư mục TXT")
         if p:
             self.txt_dir.set(p)
-            self.settings["txt_dir"] = p
-            save_settings(self.settings)
 
     def browse_eleven_api(self):
         p = filedialog.askopenfilename(title="Chọn file ElevenLabs API (mỗi dòng 1 key)", filetypes=[("Text","*.txt"),("All","*.*")])
@@ -794,7 +828,7 @@ class App(tk.Tk):
     def on_media_to_srt(self):
         api_path = self.aai_api_file.get().strip()
         media_path = self.media_file.get().strip()
-        lang = self.aai_lang.get().strip() or "vi"
+        lang = self.aai_lang.get().strip() or "en"
         if not api_path or not os.path.isfile(api_path):
             messagebox.showerror("Thiếu API AAI", "Hãy chọn file API AssemblyAI (.txt)")
             return
@@ -823,7 +857,6 @@ class App(tk.Tk):
                 out_path = os.path.join(out_dir, f"{base}.srt")
                 with open(out_path, "w", encoding="utf-8") as f:
                     f.write(srt_text)
-                self.settings["srt_file"] = out_path
                 self.srt_file.set(out_path)
                 self.settings["last_output_dir"] = out_dir
                 save_settings(self.settings)
@@ -845,7 +878,7 @@ class App(tk.Tk):
     def on_media_dir_pipeline(self):
         api_path = self.aai_api_file.get().strip()
         media_dir = self.media_dir.get().strip()
-        lang = self.aai_lang.get().strip() or "vi"
+        lang = self.aai_lang.get().strip() or "en"
         if not api_path or not os.path.isfile(api_path):
             messagebox.showerror("Thiếu API AAI", "Hãy chọn file API AssemblyAI (.txt)"); return
         if not media_dir or not os.path.isdir(media_dir):
@@ -1054,7 +1087,6 @@ class App(tk.Tk):
                     f.write(result)
                 self.script_file.set(out_path)
                 self.settings.update({
-                    "script_file": out_path,
                     "gem_model": model,
                     "output_format": self.output_format.get().strip(),
                     "target_lang": self.target_lang.get().strip(),
