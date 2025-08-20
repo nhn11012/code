@@ -539,6 +539,17 @@ class App(tk.Tk):
         ]
         self._lang_map_vi_to_en = {vi: en for (vi, en, code) in self._lang_choices}
         self._lang_map_vi_to_code = {vi: code for (vi, en, code) in self._lang_choices}
+        self._locale_map = {
+            "en": "en-US",
+            "vi": "vi-VN",
+            "es": "es-ES",
+            "pt": "pt-BR",
+            "de": "de-DE",
+            "fr": "fr-FR",
+            "ko": "ko-KR",
+            "ja": "ja-JP",
+        }
+        self._locale_opts = [""] + list(self._locale_map.values())
         self.lang_display = tk.StringVar(value=self.settings.get("lang_display", "Tiếng Việt"))
 
         # UI
@@ -619,23 +630,46 @@ class App(tk.Tk):
         ttk.Label(r, text="Định dạng:").pack(side="left", padx=(12,0))
         ttk.Combobox(r, textvariable=self.output_format, values=["Text","Markdown","JSON"], width=12, state="readonly").pack(side="left")
         ttk.Label(r, text="Ngôn ngữ:").pack(side="left", padx=(12,0))
-        cmb_lang = ttk.Combobox(r, textvariable=self.lang_display, values=[vi for (vi, en, code) in self._lang_choices], width=22, state="readonly")
+        cmb_lang = ttk.Combobox(
+            r,
+            textvariable=self.lang_display,
+            values=[vi for (vi, en, code) in self._lang_choices],
+            width=22,
+            state="readonly",
+        )
         cmb_lang.pack(side="left")
+
+        ttk.Label(r, text="Locale:").pack(side="left", padx=(12,0))
+        cmb_locale = ttk.Combobox(
+            r,
+            textvariable=self.locale,
+            values=self._locale_opts,
+            width=12,
+            state="readonly",
+        )
+        cmb_locale.pack(side="left")
+
         def _on_lang_selected(_=None):
             vi_name = self.lang_display.get()
             en_name = self._lang_map_vi_to_en.get(vi_name, "Vietnamese")
             code = self._lang_map_vi_to_code.get(vi_name, "vi")
             self.target_lang.set(en_name)
             self.lang_code.set(code)
+            self.locale.set(self._locale_map.get(code, ""))
             self.settings["lang_display"] = vi_name
             self.settings["target_lang"] = en_name
             self.settings["lang_code"] = code
+            self.settings["locale"] = self.locale.get()
             save_settings(self.settings)
+
+        def _on_locale_selected(_=None):
+            self.settings["locale"] = self.locale.get()
+            save_settings(self.settings)
+
         cmb_lang.bind("<<ComboboxSelected>>", _on_lang_selected)
+        cmb_locale.bind("<<ComboboxSelected>>", _on_locale_selected)
         # sync current on load
         _on_lang_selected()
-        ttk.Label(r, text="Locale:").pack(side="left", padx=(12,0))
-        ttk.Entry(r, textvariable=self.locale, width=12).pack(side="left")
         r = ttk.Frame(sec_g); r.pack(fill="x", **pad)
         ttk.Button(r, text="SRT → Kịch bản", command=self.on_srt_unified, width=18).pack(side="left")
         ttk.Label(r, text="Tốc độ override (tùy chọn):").pack(side="left", padx=(18,0))
