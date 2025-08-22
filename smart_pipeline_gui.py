@@ -18,6 +18,7 @@ import io
 import json
 import os
 import re
+import hashlib
 import threading
 import time
 import tempfile
@@ -70,14 +71,17 @@ def get_output_dir(src_path: str) -> str:
     """Return the `_out` directory for the given source file.
 
     If the parent folder already ends with `_out`, reuse it. Otherwise create a
-    sibling folder named ``<base>_out``.
+    sanitized sibling folder based on ``<base>`` with a short hash suffix.
     """
     parent = os.path.dirname(src_path)
     if os.path.basename(parent).endswith("_out"):
         out_dir = parent
     else:
         base = os.path.splitext(os.path.basename(src_path))[0]
-        out_dir = os.path.join(parent, f"{base}_out")
+        safe = re.sub(r"[^A-Za-z0-9._-]+", "_", base).strip("._-")
+        safe = safe[:30] if safe else "file"
+        hash_part = hashlib.sha1(base.encode("utf-8")).hexdigest()[:8]
+        out_dir = os.path.join(parent, f"{safe}_{hash_part}_out")
     os.makedirs(out_dir, exist_ok=True)
     return out_dir
 
