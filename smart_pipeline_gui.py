@@ -207,7 +207,15 @@ def build_prompt_text(srt_content: str, target_lang: str, locale: str,
     return (
         f"Write a clean narration script in {target_lang}{f' ({locale})' if locale else ''} for TikTok,"
         f" based on the SRT content.\n"
+        # 🔥 BẮT BUỘC HOOK NGAY ĐẦU
+        f"- Start with a powerful HOOK (1–2 sentences) in the first 3 seconds that surprises, asks a sharp question, "
+        f"or teases a counter-intuitive fact to grab attention. Keep it short and punchy.\n"
+        # Cấu trúc & phong cách
+        f"- Then continue the main narration based on the SRT; keep transitions smooth and engaging.\n"
+        f"- If appropriate, end with a light, natural CTA (e.g., invite to follow) but avoid sounding like an ad.\n"
+        # Độ dài/nhịp
         f"- Duration (from source): {int(round(duration_sec))} seconds. Language type: {lang_type}. {length_line}\n"
+        # Phong cách biên soạn
         f"- Conversational, natural, no disclaimers, no headings, no bullets, no markdown.\n"
         f"- Keep names and facts consistent. If length is off, rewrite to fit.\n\n"
         f"SRT:\n{srt_content}\n\n"
